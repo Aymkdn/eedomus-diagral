@@ -1,0 +1,75 @@
+{
+	"plugin_id": "diagral",
+	"name_fr": "Diagral Alarme",
+	"icon": "diagral.png",
+	"version": "1.0",
+	"creation_date": "2022-05-09",
+	"modification_date": "2022-05-09",
+	"author": "<a href=\"https://kodono.info\">AymKdn</a>",
+	"description_fr": "Ajoute un périphérique Alarme de la marque Diagral.",
+	"description_en": "",
+	"description_es": "",
+	"description_it": "",
+	"description_de": "",
+	"forum_link": "https://forum.eedomus.com/viewtopic.php?f=50&t=11358",
+	"parameters": [
+		{
+			"parameter": "USERNAME",
+			"description": "Username pour se connecter à l'application e-One",
+			"xtype": "textfield",
+      "field": "allowBlank:false, style:'width:480px'"
+	  },
+    {
+      "parameter": "PASSWORD",
+      "description": "Mot de passe pour se connecter à l'application e-One",
+      "xtype": "textfield",
+      "field": "allowBlank:false, style:'width:480px'"
+    },
+    {      
+      "parameter": "MASTERCODE",
+      "description": "Le code à 4 chiffres utilisé pour gérer la centrale",
+      "xtype": "textfield",
+      "field": "allowBlank:false, style:'width:480px'"
+    },
+    {      
+      "parameter": "SYSTEMNAME",
+      "description": "Le nom du système tel que défini dans l'application (exemple : 'Maison')",
+      "xtype": "textfield",
+      "field": "allowBlank:false, style:'width:480px'"
+    }
+	],
+	"scripts": [
+		{
+			"name": "diagral.php"
+		}
+	],
+	"devices": [
+		{
+			"device_id": "diagral_alarme",
+			"module_id": "41",
+			"type": "http",
+			"name_fr": "plugin.name",
+			"icon": "diagral.png",
+			"utilisation_id": "43",
+      "value_type": "list",
+      "values": [
+        {
+          "value": "0",
+          "http_url": "http://localhost/script/?exec=diagral.php", 
+          "http_type": "GET",
+          "http_params": "&username=plugin.parameters.USERNAME&password=plugin.parameters.PASSWORD&mastercode=plugin.parameters.MASTERCODE&systemname=plugin.parameters.SYSTEMNAME&action=[RAW_VALUE]",
+          "description": "Off",
+          "icon": "diagral_off.png"
+        },
+        {
+          "value": "100",
+          "http_url": "http://localhost/script/?exec=diagral.php", 
+          "http_type": "GET",
+          "http_params": "&username=plugin.parameters.USERNAME&password=plugin.parameters.PASSWORD&mastercode=plugin.parameters.MASTERCODE&systemname=plugin.parameters.SYSTEMNAME&action=[RAW_VALUE]",
+          "description": "On",
+          "icon": "diagral_on.png"
+        }
+      ]
+		}
+	]
+}
