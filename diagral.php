@@ -1,18 +1,39 @@
 <?
+sdk_header('text/xml');
+
 $username = getArg('username', true);
 $password = getArg('password', true);
 $masterCode = getArg('mastercode', true);
 $systemName = getArg('systemname', true);
-$action = getArg('action', true); // $action vaut 0 pour éteindre l'alarme, ou 100 pour l'allumer
+$action = getArg('action', true); // $action vaut 0 pour éteindre l'alarme, ou 100 pour l'allumer, ou 'state' pour savoir le status
+
+// restitution du résultat au format xml
+// $result est un array avec ["state" => "off", "groups" => ""]
+function sdk_showResult($result, $error=null) {
+  // on se délogue
+  httpQuery("https://appv3.tt-monitor.com/topaze/authenticate/logout", "POST", '{"systemId":"null"}', null, array("Content-Type: application/json", "Authorization: Bearer ".$sessionId, "X-Identity-Provider: JANRAIN", "ttmSessionIdNotRequired: true"));
+
+  // on écrit le contenu du XML retourné
+  echo "<root>";
+  echo "  <diagral>";
+  if ($error !== null) {
+    echo "    <error>".$error."</error>";
+  } else {
+    echo "    <status>".$result["state"]."</status>";
+    echo "    <groups>".$result["groups"]."</groups>";
+  }
+  echo "  </diagral>";
+  echo "</root>";
+}
 
 // on se logue
 $resStr = httpQuery("https://appv3.tt-monitor.com/topaze/authenticate/login", "POST", '{"username":"'.$username.'", "password":"'.$password.'"}', null, array("Content-Type: application/json"));
 $res = sdk_json_decode($resStr, true);
 if (!isset($res["sessionId"])) {
   if ($res["message"] == "error.connect.mydiagralusernotfound") {
-   echo "Utilisateur «".$username."» ou password «".$password."» inconnu : ".$resStr;
+    sdk_showResult(null, "Utilisateur «".$username."» ou password «".$password."» inconnu : ".$resStr);
   } else {
-    echo "'sessionId' n'est pas contenu dans la répose : ".$resStr;
+    sdk_showResult(null, "'sessionId' n'est pas contenu dans la répose : ".$resStr);
   }
   return;
 }
@@ -35,7 +56,7 @@ foreach($systems['systems'] as $system) {
 }
 // si on n'a pas trouvé le système indiqué
 if ($systemToUse === null) {
-  echo "Le système nommé « ".$systemName." » n'a pas été trouvé parmi ".implode(" / ", $systemNames);
+  sdk_showResult(null, "Le système nommé « ".$systemName." » n'a pas été trouvé parmi ".implode(" / ", $systemNames));
   return;
 }
 
@@ -45,7 +66,7 @@ $config = sdk_json_decode($config, true);
 
 // on vérifie les droits de l'utilisateurs
 if ($systemToUse["role"] == 0 && !$config["rights"]["UNIVERSE_ALARMS"]) {
- echo "Le compte utilisé n'a pas les droits sur l'alarme.";
+ sdk_showResult(null, "Le compte utilisé n'a pas les droits sur l'alarme.");
  return;
 }
 $transmitterId = $config["transmitterId"];
@@ -64,31 +85,51 @@ if(isset($connect["ttmSessionId"])) {
   // on a une erreur
   switch ($connect["message"]) {
     case 'transmitter.connection.badpincode': {
-      echo "Le master code ".$masterCode." est incorrect.";
+      sdk_showResult(null, "Le master code ".$masterCode." est incorrect.");
       return;
     }
     case "transmitter.connection.sessionalreadyopen": {
-      echo "Problème avec la session.";
+      sdk_showResult(null, "Problème avec la session.");
       return;
     }
     default: {
-      echo "'ttmSessionId' n'est pas présent dans ce qu'a retourné le serveur : ". $connectStr;
+      sdk_showResult(null, "'ttmSessionId' n'est pas présent dans ce qu'a retourné le serveur : ". $connectStr);
       return;
     }
   }
 }
 
-// on active/désactive l'alarme
-$systemStateStr = httpQuery("https://appv3.tt-monitor.com/topaze/action/stateCommand", "POST", '{"systemState":"'.($action==100?"on":"off").'","group":[],"currentGroup":[],"nbGroups":"4","ttmSessionId":"'.$ttmSessionId.'"}', null, array("Content-Type: application/json", "Authorization: Bearer ".$sessionId, "X-Identity-Provider: JANRAIN", "ttmSessionIdNotRequired: true"));
-$systemState = sdk_json_decode($systemStateStr, true);
+if (is_numeric($action) && ($action == 0 || $action == 100)) {
+  // on active/désactive l'alarme
+  $systemStateStr = httpQuery("https://appv3.tt-monitor.com/topaze/action/stateCommand", "POST", '{"systemState":"'.($action==100?"on":"off").'","group":[],"currentGroup":[],"nbGroups":"4","ttmSessionId":"'.$ttmSessionId.'"}', null, array("Content-Type: application/json", "Authorization: Bearer ".$sessionId, "X-Identity-Provider: JANRAIN", "ttmSessionIdNotRequired: true"));
+  $systemState = sdk_json_decode($systemStateStr, true);
 
-if(isset($systemState["commandStatus"]) && $systemState["commandStatus"] == "CMD_OK") {
-  echo "Alarme ".($action==100?"activée":"désactivée");
-} else {
-  echo "Erreur : ".$systemStateStr;
-  return;
+  if(!isset($systemState["commandStatus"]) || $systemState["commandStatus"] !== "CMD_OK") {
+    sdk_showResult(null, $systemStateStr);
+    return;
+  }
 }
 
-// on se délogue
-httpQuery("https://appv3.tt-monitor.com/topaze/authenticate/logout", "POST", '{"systemId":"null"}', null, array("Content-Type: application/json", "Authorization: Bearer ".$sessionId, "X-Identity-Provider: JANRAIN", "ttmSessionIdNotRequired: true"));
+// on retourne l'état de l'alarme
+$alarmStatusStr = httpQuery("https://appv3.tt-monitor.com/topaze/status/getSystemState", "POST", '{"centralId":"'.$centralId.'","ttmSessionId":"'.$ttmSessionId.'"}', null, array("Content-Type: application/json", "Authorization: Bearer ".$sessionId, "X-Identity-Provider: JANRAIN", "ttmSessionIdNotRequired: true"));
+$alarmStatus = sdk_json_decode($alarmStatusStr, true);
+$systemState = "inconnu";
+if(isset($alarmStatus["systemState"])) {
+  // le statut peut être "off", "group", "tempogroup", "presence", ou "on"
+  $systemState = $alarmStatus["systemState"];
+  $groups = implode(" / ", $alarmStatus["groups"]);
+  sdk_showResult(array("state" => $systemState, "groups" => $groups));
+  return;
+} else {
+  switch ($alarmStatus["message"]) {
+    case "transmitter.error.invalidsessionid": {
+      sdk_showResult(null, "Problème avec la session.");
+      return;
+    }
+    default:{
+      sdk_showResult(null, "Erreur inconnue");
+      return;
+    }
+  }
+}
 ?>

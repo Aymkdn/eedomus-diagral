@@ -12,7 +12,7 @@ Lors de l'installation, un nouvel appareil `Diagral Alarme` est créé, et on vous
 
 ![Champs de configuration](https://user-images.githubusercontent.com/946315/167384621-0ce5b79f-14e8-49ab-a23f-cd7306e97781.png)
 
-`username` et `password` sont ceux utilisés pour vous connecter à l'application e-ONE.
+`username` et `password` sont ceux utilisés pour vous connecter à l'application e-ONE. Si vous avez un `&` dans votre password, alors remplacez le par `%26`.
 
 `mastercode` est votre code de sécurité à 4 chiffres que vous utilisez pour gérer la centrale.
 
@@ -38,3 +38,19 @@ Pour activer/désactive l'alarme à la voix, vous pouvez aller dans `Configurer` d
 Donnez le même nom aux deux. Ici j'ai mis "Alarme".
 
 J'ai seulement testé avec Alexa, et cette opération m'a permis d'avoir un objet "Alarme" que je peux déclencher à la voix avec _« allume l'alarme »_.
+
+## Retour d'état
+
+Depuis la v2, un retour d'état est fait. Il s'affiche lorsqu'on appelle le script (on pourra utiliser `action=state`).
+
+Un XML est retourné : 
+> &lt;root>   
+> &nbsp;&nbsp;&lt;diagral>   
+> &nbsp;&nbsp;&nbsp;&nbsp;&lt;error>message d'erreur s'il existe&lt;/error>   
+> &nbsp;&nbsp;&nbsp;&nbsp;&lt;status>le statut de l'alarme&lt;/status>   
+> &nbsp;&nbsp;&nbsp;&nbsp;&lt;groups>le numéro du groupe activé&lt;/groups>   
+> &nbsp;&nbsp;&lt;/diagral>   
+> &lt;/root>
+
+Le `status` peut être `off` (alarme désactivée), `group` (alarme activée sur un groupe), `tempogroup` (l'alarme va s'activer à la fin du temps), `presence` (alarme activée en mode Présence), ou `on` (alarme complètement activée).
+

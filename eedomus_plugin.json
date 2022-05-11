@@ -2,11 +2,11 @@
 	"plugin_id": "diagral",
 	"name_fr": "Diagral Alarme",
 	"icon": "diagral.png",
-	"version": "1.0",
+	"version": "2.0",
 	"creation_date": "2022-05-09",
 	"modification_date": "2022-05-09",
-	"author": "<a href=\"https://kodono.info\">AymKdn</a>",
-	"description_fr": "Ajoute un périphérique Alarme de la marque Diagral.",
+	"author": "<a href=\"https://kodono.info\" target=\"_blank\">AymKdn</a>",
+	"description_fr": "Ajoute un périphérique Alarme de la marque <a href=\"https://www.diagral.fr/\" target=\"_blank\">Diagral</a>.",
 	"description_en": "",
 	"description_es": "",
 	"description_it": "",
@@ -70,6 +70,32 @@
           "icon": "diagral_on.png"
         }
       ]
-		}
+		},
+    {
+      "device_id": "diagral_state",
+      "parent_id": "diagral_alarme",
+      "module_id": "51",
+      "type": "http",
+      "name_fr": "plugin.name - Retour d'état",
+      "icon": "diagral.png",
+      "utilisation_id": "35",
+      "parameters":
+      {
+        "VAR1": "plugin.parameters.SYSTEMNAME",
+        "value_type": "list",
+        "ignore_errors": 3,
+        "RAW_URL": "http://localhost/script/?exec=diagral.php&username=plugin.parameters.USERNAME&password=plugin.parameters.PASSWORD&mastercode=plugin.parameters.MASTERCODE&systemname=plugin.parameters.SYSTEMNAME&action=state",
+        "RAW_XPATH": "//diagral/status",
+        "POLLING": "1"
+      },
+      "values": [
+        { "value": "off", "description": "Alarme éteinte", "icon": "diagral_off.png" },
+        { "value": "on", "description": "Alarme allumée", "icon": "diagral_on.png" },
+        { "value": "presence", "description": "Alarme allumée (Présence)", "icon": "diagral_on.png" },
+        { "value": "group", "description": "Alarme allumée (Groupe)", "icon": "diagral_on.png" },
+        { "value": "tempogroup", "description": "Alarme allumée (TempoGroup)", "icon": "diagral_on.png" },
+        { "value": "inconnu", "description": "Statut indéterminé", "icon": "diagral_unknown.png" }
+      ]
+    }
 	]
 }
