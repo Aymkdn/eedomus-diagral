@@ -1,4 +1,5 @@
 <?
+// basé sur https://github.com/mguyard/Jeedom-Diagral_eOne
 sdk_header('text/xml');
 
 $username = getArg('username', true);
@@ -8,10 +9,30 @@ $systemName = getArg('systemname', true);
 $action = getArg('action', true); // $action vaut 0 pour éteindre l'alarme, ou 100 pour l'allumer, ou 'state' pour savoir le status
 
 // restitution du résultat au format xml
-// $result est un array avec ["state" => "off", "groups" => ""]
+// $result est un array avec ["state" => "off", "group" => 1]
 function sdk_showResult($result, $error=null) {
   // on se délogue
   httpQuery("https://appv3.tt-monitor.com/topaze/authenticate/logout", "POST", '{"systemId":"null"}', null, array("Content-Type: application/json", "Authorization: Bearer ".$sessionId, "X-Identity-Provider: JANRAIN", "ttmSessionIdNotRequired: true"));
+
+  $state = ($result["state"]==="off" ? "off" : "on");
+  $label = $result["state"];
+
+  // pour les groupes, on va retourner (tempo)group + n° du groupe
+  if ($label === "group" || $label === "tempogroup") {
+    $label .= $result["group"];
+  }
+
+  switch ($label) {
+    case "off": $value=0; break;
+    case "on": $value=100; break;
+    case "presence": $value=105; break;
+    default:{
+      if (strpos($label, 'group1') !== false) $value = 101;
+      else if (strpos($label, 'group2') !== false) $value = 102;
+      else if (strpos($label, 'group3') !== false) $value = 103;
+      else if (strpos($label, 'group4') !== false) $value = 104;
+    }
+  }
 
   // on écrit le contenu du XML retourné
   echo "<root>";
@@ -19,8 +40,9 @@ function sdk_showResult($result, $error=null) {
   if ($error !== null) {
     echo "    <error>".$error."</error>";
   } else {
-    echo "    <status>".$result["state"]."</status>";
-    echo "    <groups>".$result["groups"]."</groups>";
+    echo "    <state>".$state."</state>";
+    echo "    <label>".$label."</label>";
+    echo "    <value>".$value."</value>";
   }
   echo "  </diagral>";
   echo "</root>";
@@ -99,9 +121,19 @@ if(isset($connect["ttmSessionId"])) {
   }
 }
 
-if (is_numeric($action) && ($action == 0 || $action == 100)) {
+if (is_numeric($action) && ($action == 0 || $action >= 100)) {
   // on active/désactive l'alarme
-  $systemStateStr = httpQuery("https://appv3.tt-monitor.com/topaze/action/stateCommand", "POST", '{"systemState":"'.($action==100?"on":"off").'","group":[],"currentGroup":[],"nbGroups":"4","ttmSessionId":"'.$ttmSessionId.'"}', null, array("Content-Type: application/json", "Authorization: Bearer ".$sessionId, "X-Identity-Provider: JANRAIN", "ttmSessionIdNotRequired: true"));
+  $state = "off";
+  $group = "";
+  switch($action) {
+    case 100: $state="on"; break;
+    case 101: $state="group"; $group=1; break;
+    case 102: $state="group"; $group=2; break;
+    case 103: $state="group"; $group=3; break;
+    case 104: $state="group"; $group=4; break;
+    case 105: $state="presence"; break;
+  }
+  $systemStateStr = httpQuery("https://appv3.tt-monitor.com/topaze/action/stateCommand", "POST", '{"systemState":"'.$state.'","group":['.$group.'],"currentGroup":[],"nbGroups":"4","ttmSessionId":"'.$ttmSessionId.'"}', null, array("Content-Type: application/json", "Authorization: Bearer ".$sessionId, "X-Identity-Provider: JANRAIN", "ttmSessionIdNotRequired: true"));
   $systemState = sdk_json_decode($systemStateStr, true);
 
   if(!isset($systemState["commandStatus"]) || $systemState["commandStatus"] !== "CMD_OK") {
@@ -117,8 +149,15 @@ $systemState = "inconnu";
 if(isset($alarmStatus["systemState"])) {
   // le statut peut être "off", "group", "tempogroup", "presence", ou "on"
   $systemState = $alarmStatus["systemState"];
-  $groups = implode(" / ", $alarmStatus["groups"]);
-  sdk_showResult(array("state" => $systemState, "groups" => $groups));
+  // si on a plusieurs groupes activés, on va considérer que toute la maison est en marche
+  $group = "";
+  if (count($alarmStatus["groups"]) > 1) {
+    $systemState = "on";
+  } else if (count($alarmStatus["groups"]) === 1) {
+    // si on a qu'un groupe, on l'affiche
+    $group = $alarmStatus["groups"][0];
+  }
+  sdk_showResult(array("state" => $systemState, "group" => $group));
   return;
 } else {
   switch ($alarmStatus["message"]) {

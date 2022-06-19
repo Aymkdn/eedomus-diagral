@@ -22,14 +22,18 @@ Lors de l'installation, un nouvel appareil `Diagral Alarme` est créé, et on vous
 
 Une fois l'appareil créé, vous pouvez aller voir dans l'onglet **Valeurs** :
 
-![Liste des valeurs](https://user-images.githubusercontent.com/946315/167385123-4f28f4cd-3d0d-46fd-a8e7-79f2761c4ffa.png)
+![Liste des valeurs](https://user-images.githubusercontent.com/946315/173418136-e210bdb8-3a2e-4571-88ca-795224d41a0d.png)
 
-Deux valeurs sont possibles : `0` pour `Off` (éteindre l'alarme), et `100` pour `On` (allumer l'alarme). Cela correspond à l'action/désactivation totale de l'alarme.
+Plusieurs valeurs sont possibles :   
+  - `0` pour `Off` (éteindre l'alarme) qui correspond à la désactivation totale de l'alarme ;    
+  - `100` pour `On` (allumer l'alarme) qui correspond à l'activation totale de l'alarme ;    
+  - de `101` à `104` (allumer un groupe de 1 à 4) qui correspond à l'activation d'un groupe ;    
+  - `105` (allumer la présence) qui correspond à l'activation du mode présence.
 
 L'édition de la celulle "Paramètres" va donner quelque chose comme ça :
-> _&username=abcdef@something.com&password=votremotdepasse&mastercode=1234&systemname=Maison&action=[RAW_VALUE]_
+> &username=abcdef@something.com&password=votremotdepasse&mastercode=1234&systemname=Maison&action=[RAW_VALUE]
 
-## Utilisation avec Google et Alexa
+## Utilisation avec Alexa
 
 Pour activer/désactive l'alarme à la voix, vous pouvez aller dans `Configurer` de votre box eedomus, puis dans la section de votre assistant vocal, activez les deux cases pour l'appareil : 
 
@@ -37,20 +41,27 @@ Pour activer/désactive l'alarme à la voix, vous pouvez aller dans `Configurer` d
 
 Donnez le même nom aux deux. Ici j'ai mis "Alarme".
 
-J'ai seulement testé avec Alexa, et cette opération m'a permis d'avoir un objet "Alarme" que je peux déclencher à la voix avec _« allume l'alarme »_.
+J'ai testé avec Alexa, et cette opération m'a permis d'avoir un objet "Alarme" que je peux déclencher à la voix avec _« allume l'alarme »_.
+
+## Utilisation avec Google
+
+L'astuce décrite ci-dessus pour Alexa ne semble pas fonctionner correctement avec Google. Pour celui-ci, il faudra plutôt se tourner vers [IFTTT](https://ifttt.com) et faire un appel à l'API de la box eedomus.
 
 ## Retour d'état
 
-Depuis la v2, un retour d'état est fait. Il s'affiche lorsqu'on appelle le script (on pourra utiliser `action=state`).
+Le retour d'état se fait directement sur l'appareil.
 
-Un XML est retourné : 
+On peut aussi appeler l'URL [http://localhost/script/?exec=diagral.php&username=USERNAME&password=PASSWORD&mastercode=MASTERCODE&systemname=SYSTEMNAME&action=state](http://localhost/script/?exec=diagral.php&username=USERNAME&password=PASSWORD&mastercode=MASTERCODE&systemname=SYSTEMNAME&action=state) pour avoir le fichier XML ci-dessous :    
 > &lt;root>   
 > &nbsp;&nbsp;&lt;diagral>   
-> &nbsp;&nbsp;&nbsp;&nbsp;&lt;error>message d'erreur s'il existe&lt;/error>   
-> &nbsp;&nbsp;&nbsp;&nbsp;&lt;status>le statut de l'alarme&lt;/status>   
-> &nbsp;&nbsp;&nbsp;&nbsp;&lt;groups>le numéro du groupe activé&lt;/groups>   
+> &nbsp;&nbsp;&nbsp;&nbsp;&lt;error>message d'erreur (s'il existe)&lt;/error>   
+> &nbsp;&nbsp;&nbsp;&nbsp;&lt;state>le statut de l'alarme (soit 'on', soit 'off')&lt;/state>   
+> &nbsp;&nbsp;&nbsp;&nbsp;&lt;label>le nom de ce qui est activé ('tempogroup1', 'group1', 'off', 'on', 'presence', …)&lt;/label>   
+> &nbsp;&nbsp;&nbsp;&nbsp;&lt;value>la valeur de ce qui est activé (0, 100, 101, …, 105)&lt;/value>   
 > &nbsp;&nbsp;&lt;/diagral>   
 > &lt;/root>
 
-Le `status` peut être `off` (alarme désactivée), `group` (alarme activée sur un groupe), `tempogroup` (l'alarme va s'activer à la fin du temps), `presence` (alarme activée en mode Présence), ou `on` (alarme complètement activée).
+À noter :   
+  - `tempogroup` signifie que l'alarme va s'activer à la fin du temps sur le groupe indiqué.   
+  - s'il y a plus d'un groupe d'activé en même temps, on considère que toute la maison est active, donc `label` va retourner "on" et `value` va retourner "100".   
 

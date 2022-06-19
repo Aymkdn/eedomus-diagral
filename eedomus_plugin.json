@@ -2,9 +2,9 @@
 	"plugin_id": "diagral",
 	"name_fr": "Diagral Alarme",
 	"icon": "diagral.png",
-	"version": "2.0",
+	"version": "3.0",
 	"creation_date": "2022-05-09",
-	"modification_date": "2022-05-09",
+	"modification_date": "2022-06-19",
 	"author": "<a href=\"https://kodono.info\" target=\"_blank\">AymKdn</a>",
 	"description_fr": "Ajoute un périphérique Alarme de la marque <a href=\"https://www.diagral.fr/\" target=\"_blank\">Diagral</a>.",
 	"description_en": "",
@@ -51,6 +51,15 @@
 			"name_fr": "plugin.name",
 			"icon": "diagral.png",
 			"utilisation_id": "43",
+      "parameters":
+      {
+        "VAR1": "plugin.parameters.SYSTEMNAME",
+        "value_type": "list",
+        "ignore_errors": 3,
+        "RAW_URL": "http://localhost/script/?exec=diagral.php&username=plugin.parameters.USERNAME&password=plugin.parameters.PASSWORD&mastercode=plugin.parameters.MASTERCODE&systemname=plugin.parameters.SYSTEMNAME&action=state",
+        "RAW_XPATH": "//diagral/value",
+        "POLLING": "1"
+      },
       "value_type": "list",
       "values": [
         {
@@ -68,34 +77,48 @@
           "http_params": "&username=plugin.parameters.USERNAME&password=plugin.parameters.PASSWORD&mastercode=plugin.parameters.MASTERCODE&systemname=plugin.parameters.SYSTEMNAME&action=[RAW_VALUE]",
           "description": "On",
           "icon": "diagral_on.png"
+        },
+        {
+          "value": "101",
+          "http_url": "http://localhost/script/?exec=diagral.php", 
+          "http_type": "GET",
+          "http_params": "&username=plugin.parameters.USERNAME&password=plugin.parameters.PASSWORD&mastercode=plugin.parameters.MASTERCODE&systemname=plugin.parameters.SYSTEMNAME&action=[RAW_VALUE]",
+          "description": "Groupe 1",
+          "icon": "diagral_groupe1.png"
+        },
+        {
+          "value": "102",
+          "http_url": "http://localhost/script/?exec=diagral.php", 
+          "http_type": "GET",
+          "http_params": "&username=plugin.parameters.USERNAME&password=plugin.parameters.PASSWORD&mastercode=plugin.parameters.MASTERCODE&systemname=plugin.parameters.SYSTEMNAME&action=[RAW_VALUE]",
+          "description": "Groupe 2",
+          "icon": "diagral_groupe2.png"
+        },
+        {
+          "value": "103",
+          "http_url": "http://localhost/script/?exec=diagral.php", 
+          "http_type": "GET",
+          "http_params": "&username=plugin.parameters.USERNAME&password=plugin.parameters.PASSWORD&mastercode=plugin.parameters.MASTERCODE&systemname=plugin.parameters.SYSTEMNAME&action=[RAW_VALUE]",
+          "description": "Groupe 3",
+          "icon": "diagral_groupe3.png"
+        },
+        {
+          "value": "104",
+          "http_url": "http://localhost/script/?exec=diagral.php", 
+          "http_type": "GET",
+          "http_params": "&username=plugin.parameters.USERNAME&password=plugin.parameters.PASSWORD&mastercode=plugin.parameters.MASTERCODE&systemname=plugin.parameters.SYSTEMNAME&action=[RAW_VALUE]",
+          "description": "Groupe 4",
+          "icon": "diagral_groupe4.png"
+        },
+        {
+          "value": "105",
+          "http_url": "http://localhost/script/?exec=diagral.php", 
+          "http_type": "GET",
+          "http_params": "&username=plugin.parameters.USERNAME&password=plugin.parameters.PASSWORD&mastercode=plugin.parameters.MASTERCODE&systemname=plugin.parameters.SYSTEMNAME&action=[RAW_VALUE]",
+          "description": "Présence",
+          "icon": "diagral_presence.png"
         }
       ]
-		},
-    {
-      "device_id": "diagral_state",
-      "parent_id": "diagral_alarme",
-      "module_id": "51",
-      "type": "http",
-      "name_fr": "plugin.name - Retour d'état",
-      "icon": "diagral.png",
-      "utilisation_id": "35",
-      "parameters":
-      {
-        "VAR1": "plugin.parameters.SYSTEMNAME",
-        "value_type": "list",
-        "ignore_errors": 3,
-        "RAW_URL": "http://localhost/script/?exec=diagral.php&username=plugin.parameters.USERNAME&password=plugin.parameters.PASSWORD&mastercode=plugin.parameters.MASTERCODE&systemname=plugin.parameters.SYSTEMNAME&action=state",
-        "RAW_XPATH": "//diagral/status",
-        "POLLING": "1"
-      },
-      "values": [
-        { "value": "off", "description": "Alarme éteinte", "icon": "diagral_off.png" },
-        { "value": "on", "description": "Alarme allumée", "icon": "diagral_on.png" },
-        { "value": "presence", "description": "Alarme allumée (Présence)", "icon": "diagral_on.png" },
-        { "value": "group", "description": "Alarme allumée (Groupe)", "icon": "diagral_on.png" },
-        { "value": "tempogroup", "description": "Alarme allumée (TempoGroup)", "icon": "diagral_on.png" },
-        { "value": "inconnu", "description": "Statut indéterminé", "icon": "diagral_unknown.png" }
-      ]
-    }
+		}
 	]
 }
