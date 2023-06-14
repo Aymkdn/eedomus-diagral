@@ -38,7 +38,7 @@ function sdk_showResult($result, $error=null) {
   echo "<root>";
   echo "  <diagral>";
   if ($error !== null) {
-    echo "    <error>".$error."</error>";
+    echo "    <error>".str_replace(array("é", "è"), array("&eacute;", "&egrave;"), $error)."</error>";
   } else {
     echo "    <state>".$state."</state>";
     echo "    <label>".$label."</label>";
@@ -46,6 +46,25 @@ function sdk_showResult($result, $error=null) {
   }
   echo "  </diagral>";
   echo "</root>";
+}
+
+// source: https://github.com/mguyard/Jeedom-Diagral_eOne/blob/master/3rparty/Diagral-eOne-API-PHP/class/Diagral/UUID.class.php
+function sdk_uuid() {
+  return sprintf('%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
+    // 32 bits for "time_low"
+    mt_rand(0, 0xffff), mt_rand(0, 0xffff),
+    // 16 bits for "time_mid"
+    mt_rand(0, 0xffff),
+    // 16 bits for "time_hi_and_version",
+    // four most significant bits holds version number 4
+    mt_rand(0, 0x0fff) | 0x4000,
+    // 16 bits, 8 bits for "clk_seq_hi_res",
+    // 8 bits for "clk_seq_low",
+    // two most significant bits holds zero and one for variant DCE1.1
+    mt_rand(0, 0x3fff) | 0x8000,
+    // 48 bits for "node"
+    mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
+  );
 }
 
 // on se logue
@@ -92,7 +111,7 @@ if ($systemToUse["role"] == 0 && !$config["rights"]["UNIVERSE_ALARMS"]) {
  return;
 }
 $transmitterId = $config["transmitterId"];
-$centralId = $data["centralId"];
+$centralId = $config["centralId"];
 
 // on se connecte avec le mastercode
 $connectStr = httpQuery("https://appv3.tt-monitor.com/topaze/authenticate/connect", "POST", '{"masterCode":"'.$masterCode.'","transmitterId":"'.$transmitterId.'","systemId":'.$systemToUse["id"].',"role":'.$systemToUse["role"].'}', null, array("Content-Type: application/json", "Authorization: Bearer ".$sessionId, "X-Identity-Provider: JANRAIN", "ttmSessionIdNotRequired: true"));
@@ -121,53 +140,93 @@ if(isset($connect["ttmSessionId"])) {
   }
 }
 
-if (is_numeric($action) && ($action == 0 || $action >= 100)) {
-  // on active/désactive l'alarme
-  $state = "off";
-  $group = "";
-  switch($action) {
-    case 100: $state="on"; break;
-    case 101: $state="group"; $group=1; break;
-    case 102: $state="group"; $group=2; break;
-    case 103: $state="group"; $group=3; break;
-    case 104: $state="group"; $group=4; break;
-    case 105: $state="presence"; break;
-  }
-  $systemStateStr = httpQuery("https://appv3.tt-monitor.com/topaze/action/stateCommand", "POST", '{"systemState":"'.$state.'","group":['.$group.'],"currentGroup":[],"nbGroups":"4","ttmSessionId":"'.$ttmSessionId.'"}', null, array("Content-Type: application/json", "Authorization: Bearer ".$sessionId, "X-Identity-Provider: JANRAIN", "ttmSessionIdNotRequired: true"));
-  $systemState = sdk_json_decode($systemStateStr, true);
-
-  if(!isset($systemState["commandStatus"]) || $systemState["commandStatus"] !== "CMD_OK") {
-    sdk_showResult(null, $systemStateStr);
-    return;
-  }
-}
-
-// on retourne l'état de l'alarme
-$alarmStatusStr = httpQuery("https://appv3.tt-monitor.com/topaze/status/getSystemState", "POST", '{"centralId":"'.$centralId.'","ttmSessionId":"'.$ttmSessionId.'"}', null, array("Content-Type: application/json", "Authorization: Bearer ".$sessionId, "X-Identity-Provider: JANRAIN", "ttmSessionIdNotRequired: true"));
-$alarmStatus = sdk_json_decode($alarmStatusStr, true);
-$systemState = "inconnu";
-if(isset($alarmStatus["systemState"])) {
-  // le statut peut être "off", "group", "tempogroup", "presence", ou "on"
-  $systemState = $alarmStatus["systemState"];
-  // si on a plusieurs groupes activés, on va considérer que toute la maison est en marche
-  $group = "";
-  if (count($alarmStatus["groups"]) > 1) {
-    $systemState = "on";
-  } else if (count($alarmStatus["groups"]) === 1) {
-    // si on a qu'un groupe, on l'affiche
-    $group = $alarmStatus["groups"][0];
-  }
-  sdk_showResult(array("state" => $systemState, "group" => $group));
-  return;
-} else {
-  switch ($alarmStatus["message"]) {
-    case "transmitter.error.invalidsessionid": {
-      sdk_showResult(null, "Problème avec la session.");
-      return;
+// si on veut lister les différents scenarios
+if($action === "scenarios") {
+  $uuid = sdk_uuid();
+  $try=0;
+  $devicesStr = httpQuery("https://appv3.tt-monitor.com/topaze/configuration/v2/getDevicesMultizone/".$uuid, "POST", '{"systemId":"'.$systemToUse["id"].'","centralId":"'.$centralId.'","transmitterId":"'.$transmitterId.'","ttmSessionId":"'.$ttmSessionId.'","isVideoOptional":"true","isScenariosZoneOptional":"true","boxVersion":"'.$versions["box"].'"}', null, array("Content-Type: application/json", "Authorization: Bearer ".$sessionId, "X-Identity-Provider: JANRAIN", "ttmSessionIdNotRequired: true"), false, true);
+  do {
+    $devicesStatusStr = httpQuery("https://appv3.tt-monitor.com/topaze/configuration/v2/getDevicesMultizone/".$uuid, "GET", null, null, array("Content-Type: application/json", "Authorization: Bearer ".$sessionId, "X-Identity-Provider: JANRAIN", "ttmSessionIdNotRequired: true"), false, true);
+    $devicesStatus = sdk_json_decode($devicesStatusStr, true);
+    if ($devicesStatus["status"] === "request_status_done") {
+      // on est obligé de faire un traitement sur la réponse sinon sdk_json_decode ne fonctionne pas
+      $response = str_replace("'","",$devicesStatus["response"]);
+      $scenarios = substr($response, strpos($response, '"manualOrEventScenarios"')-1);
+      $scenarios = substr($scenarios, 0, strpos($scenarios, ',"rawData"'))."}";
+      $devices = sdk_json_decode($scenarios, true);
+      echo "<root>";
+      echo "  <diagral>";
+      foreach ($devices["manualOrEventScenarios"] as $scenario) {
+        echo "    <scenario>";
+        echo "      <id>".$scenario["id"]."</id>";
+        echo "      <name>".$scenario["name"]."</name>";
+        echo "    </scenario>";
+      }
+      echo "  </diagral>";
+      echo "</root>";
+      break;
     }
-    default:{
-      sdk_showResult(null, "Erreur inconnue");
-      return;
+  } while(++$try < 500);
+} else {
+  if (is_numeric($action)) {
+    if (($action == 0 || $action >= 100) && $action < 1000) {
+      // on active/désactive l'alarme
+      $state = "off";
+      $group = "";
+      switch($action) {
+        case 100: $state="on"; break;
+        case 101: $state="group"; $group=1; break;
+        case 102: $state="group"; $group=2; break;
+        case 103: $state="group"; $group=3; break;
+        case 104: $state="group"; $group=4; break;
+        case 105: $state="presence"; break;
+      }
+      $systemStateStr = httpQuery("https://appv3.tt-monitor.com/topaze/action/stateCommand", "POST", '{"systemState":"'.$state.'","group":['.$group.'],"currentGroup":[],"nbGroups":"4","ttmSessionId":"'.$ttmSessionId.'"}', null, array("Content-Type: application/json", "Authorization: Bearer ".$sessionId, "X-Identity-Provider: JANRAIN", "ttmSessionIdNotRequired: true"));
+      $systemState = sdk_json_decode($systemStateStr, true);
+
+      if(!isset($systemState["commandStatus"]) || $systemState["commandStatus"] !== "CMD_OK") {
+        sdk_showResult(null, $systemStateStr);
+        return;
+      }
+    } else if ($action > 1000) {
+      // on déclenche un scénario
+      $id = $action - 1000;
+      $scenarioStr = httpQuery("https://appv3.tt-monitor.com/topaze/api/scenarios/launch", "POST", '{"scenarioId":"'.$id.'","ttmSessionId":"'.$ttmSessionId.'"}', null, array("Content-Type: application/json", "Authorization: Bearer ".$sessionId, "X-Identity-Provider: JANRAIN", "ttmSessionIdNotRequired: true"));
+      
+      if ($scenarioStr !== '["CMD_OK"]') {
+        sdk_showResult(null, $scenarioStr);
+        return;
+      }
+    }
+  }
+
+  // on retourne l'état de l'alarme
+  $alarmStatusStr = httpQuery("https://appv3.tt-monitor.com/topaze/status/getSystemState", "POST", '{"centralId":"'.$centralId.'","ttmSessionId":"'.$ttmSessionId.'"}', null, array("Content-Type: application/json", "Authorization: Bearer ".$sessionId, "X-Identity-Provider: JANRAIN", "ttmSessionIdNotRequired: true"));
+  $alarmStatus = sdk_json_decode($alarmStatusStr, true);
+  $systemState = "inconnu";
+  if(isset($alarmStatus["systemState"])) {
+    // le statut peut être "off", "group", "tempogroup", "presence", ou "on"
+    $systemState = $alarmStatus["systemState"];
+    // si on a plusieurs groupes activés, on va considérer que toute la maison est en marche
+    $group = "";
+    if (count($alarmStatus["groups"]) > 1) {
+      $systemState = "on";
+    } else if (count($alarmStatus["groups"]) === 1) {
+      // si on a qu'un groupe, on l'affiche
+      $group = $alarmStatus["groups"][0];
+    }
+    sdk_showResult(array("state" => $systemState, "group" => $group));
+    return;
+  } else {
+    switch ($alarmStatus["message"]) {
+      case "transmitter.error.invalidsessionid": {
+        sdk_showResult(null, "Problème avec la session.");
+        return;
+      }
+      default:{
+        sdk_showResult(null, "Erreur inconnue");
+        return;
+      }
     }
   }
 }

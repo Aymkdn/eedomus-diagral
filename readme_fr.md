@@ -33,23 +33,19 @@ Plusieurs valeurs sont possibles :
 L'édition de la celulle "Paramètres" va donner quelque chose comme ça :
 > &username=abcdef@something.com&password=votremotdepasse&mastercode=1234&systemname=Maison&action=[RAW_VALUE]
 
-## Utilisation avec Alexa
+## Utiliser un scénario
 
-Pour activer/désactive l'alarme à la voix, vous pouvez aller dans `Configurer` de votre box eedomus, puis dans la section de votre assistant vocal, activez les deux cases pour l'appareil : 
+Il est possible de créer des scénarios dans l'application e-One. Par exemple, un scénario de déclenchement de l'alarme. Ainsi, en utilisant ce plugin, vous pouvez démarrer un scénario. Exemple : vous avez un capteur dans eedomus qui détecte une intrusion, alors eedomus peut enclencher l'alarme.
 
-![éteint et allume sont cochés sous l'appareil Alarme](https://user-images.githubusercontent.com/946315/167385335-cff26b42-5366-46e6-b0bd-6a21ac7d49c6.png)
+Pour lister vos scénarios et trouver leur identifiant, vous devez utiliser l'action `scenarios` (url identique aux actions décrites ci-dessus) :
+> &username=abcdef@something.com&password=votremotdepasse&mastercode=1234&systemname=Maison&action=scenarios
 
-Donnez le même nom aux deux. Ici j'ai mis "Alarme".
-
-J'ai testé avec Alexa, et cette opération m'a permis d'avoir un objet "Alarme" que je peux déclencher à la voix avec _« allume l'alarme »_.
-
-## Utilisation avec Google
-
-L'astuce décrite ci-dessus pour Alexa ne semble pas fonctionner correctement avec Google. Pour celui-ci, il faudra plutôt se tourner vers [IFTTT](https://ifttt.com) et faire un appel à l'API de la box eedomus.
+Une fois que vous avez l'identifiant, vous pouvez déclencher un scénario en utilisant comme action la valeur `1000 + id`. Par exemple, si l'id de votre scénario est 1, alors la valeur à utiliser est **1001** : 
+> &username=abcdef@something.com&password=votremotdepasse&mastercode=1234&systemname=Maison&action=1001
 
 ## Retour d'état
 
-Le retour d'état se fait directement sur l'appareil.
+Le plugin est configuré pour récupérer l'état de l'alarme toutes les dix minutes. **Attention** de ne pas réduire cette valeur, au risque d'avoir son compte bloqué par Diagral.
 
 On peut aussi appeler l'URL [http://localhost/script/?exec=diagral.php&username=USERNAME&password=PASSWORD&mastercode=MASTERCODE&systemname=SYSTEMNAME&action=state](http://localhost/script/?exec=diagral.php&username=USERNAME&password=PASSWORD&mastercode=MASTERCODE&systemname=SYSTEMNAME&action=state) pour avoir le fichier XML ci-dessous :    
 > &lt;root>   
@@ -64,4 +60,18 @@ On peut aussi appeler l'URL [http://localhost/script/?exec=diagral.php&username=
 À noter :   
   - `tempogroup` signifie que l'alarme va s'activer à la fin du temps sur le groupe indiqué.   
   - s'il y a plus d'un groupe d'activé en même temps, on considère que toute la maison est active, donc `label` va retourner "on" et `value` va retourner "100".   
+  
+## Utilisation avec Alexa
+
+Pour activer/désactive l'alarme à la voix, vous pouvez aller dans `Configurer` de votre box eedomus, puis dans la section de votre assistant vocal, activez les deux cases pour l'appareil : 
+
+![éteint et allume sont cochés sous l'appareil Alarme](https://user-images.githubusercontent.com/946315/167385335-cff26b42-5366-46e6-b0bd-6a21ac7d49c6.png)
+
+Donnez le même nom aux deux. Ici j'ai mis "Alarme".
+
+J'ai testé avec Alexa, et cette opération m'a permis d'avoir un objet "Alarme" que je peux déclencher à la voix avec _« allume l'alarme »_.
+
+## Utilisation avec Google
+
+L'astuce décrite ci-dessus pour Alexa ne semble pas fonctionner correctement avec Google. Pour celui-ci, il faudra plutôt se tourner vers [IFTTT](https://ifttt.com) et faire un appel à l'API de la box eedomus.
 
