@@ -8,11 +8,21 @@ $masterCode = getArg('mastercode', true);
 $systemName = getArg('systemname', true);
 $action = getArg('action', true); // $action vaut 0 pour éteindre l'alarme, ou 100 pour l'allumer, ou 'state' pour savoir le status
 
+$defaultHeaders = array(
+  "User-Agent: eOne/1.12.1.2 CFNetwork/1240.0.4 Darwin/20.6.0",
+  "Accept: application/json, text/plain, */*",
+  "Accept-Encoding: deflate",
+  "X-App-Version: 1.12.1",
+  "X-Identity-Provider: JANRAIN",
+  "ttmSessionIdNotRequired: true",
+  "X-Vendor: diagral"
+);
+
 // restitution du résultat au format xml
 // $result est un array avec ["state" => "off", "group" => 1]
 function sdk_showResult($result, $error=null) {
   // on se délogue
-  httpQuery("https://appv3.tt-monitor.com/topaze/authenticate/logout", "POST", '{"systemId":"null"}', null, array("Content-Type: application/json", "Authorization: Bearer ".$sessionId, "X-Identity-Provider: JANRAIN", "ttmSessionIdNotRequired: true"));
+  httpQuery("https://appv3.tt-monitor.com/topaze/authenticate/logout", "POST", '{"systemId":"null"}', null, array_merge($defaultHeaders, array("Content-Type: application/json;charset=UTF-8", "Authorization: Bearer ".$sessionId)));
 
   $state = ($result["state"]==="off" ? "off" : "on");
   $label = $result["state"];
@@ -68,7 +78,7 @@ function sdk_uuid() {
 }
 
 // on se logue
-$resStr = httpQuery("https://appv3.tt-monitor.com/topaze/authenticate/login", "POST", '{"username":"'.$username.'", "password":"'.$password.'"}', null, array("Content-Type: application/json"));
+$resStr = httpQuery("https://appv3.tt-monitor.com/topaze/authenticate/login", "POST", '{"username":"'.$username.'", "password":"'.$password.'"}', null, array_merge($defaultHeaders, array("Content-Type: application/json;charset=UTF-8")));
 $res = sdk_json_decode($resStr, true);
 if (!isset($res["sessionId"])) {
   if ($res["message"] == "error.connect.mydiagralusernotfound") {
@@ -82,7 +92,7 @@ $sessionId = $res['sessionId'];
 $diagralId = $res['diagralId'];
 
 // on récupère tous les systèmes
-$systems = httpQuery("https://appv3.tt-monitor.com/topaze/configuration/getSystems", "POST", '{}', null, array("Content-Type: application/json", "Authorization: Bearer ".$sessionId, "X-Identity-Provider: JANRAIN", "ttmSessionIdNotRequired: true"));
+$systems = httpQuery("https://appv3.tt-monitor.com/topaze/configuration/getSystems", "POST", '{}', null, array_merge($defaultHeaders, array("Content-Type: application/json;charset=UTF-8", "Authorization: Bearer ".$sessionId)));
 $systems = sdk_json_decode($systems, true);
 
 // on regarde si le système demandé est là
@@ -102,7 +112,7 @@ if ($systemToUse === null) {
 }
 
 // on récupère la configuration
-$config = httpQuery("https://appv3.tt-monitor.com/topaze/configuration/getConfiguration", "POST", '{"systemId":'.$systemToUse["id"].',"role":'.$systemToUse["role"].'}', null, array("Content-Type: application/json", "Authorization: Bearer ".$sessionId, "X-Identity-Provider: JANRAIN", "ttmSessionIdNotRequired: true"));
+$config = httpQuery("https://appv3.tt-monitor.com/topaze/configuration/getConfiguration", "POST", '{"systemId":'.$systemToUse["id"].',"role":'.$systemToUse["role"].'}', null, array_merge($defaultHeaders, array("Content-Type: application/json;charset=UTF-8", "Authorization: Bearer ".$sessionId)));
 $config = sdk_json_decode($config, true);
 
 // on vérifie les droits de l'utilisateurs
@@ -114,7 +124,7 @@ $transmitterId = $config["transmitterId"];
 $centralId = $config["centralId"];
 
 // on se connecte avec le mastercode
-$connectStr = httpQuery("https://appv3.tt-monitor.com/topaze/authenticate/connect", "POST", '{"masterCode":"'.$masterCode.'","transmitterId":"'.$transmitterId.'","systemId":'.$systemToUse["id"].',"role":'.$systemToUse["role"].'}', null, array("Content-Type: application/json", "Authorization: Bearer ".$sessionId, "X-Identity-Provider: JANRAIN", "ttmSessionIdNotRequired: true"));
+$connectStr = httpQuery("https://appv3.tt-monitor.com/topaze/authenticate/connect", "POST", '{"masterCode":"'.$masterCode.'","transmitterId":"'.$transmitterId.'","systemId":'.$systemToUse["id"].',"role":'.$systemToUse["role"].'}', null, array_merge($defaultHeaders, array("Content-Type: application/json;charset=UTF-8", "Authorization: Bearer ".$sessionId)));
 $connect = sdk_json_decode($connectStr, true);
 
 if(isset($connect["ttmSessionId"])) {
@@ -144,9 +154,9 @@ if(isset($connect["ttmSessionId"])) {
 if($action === "scenarios") {
   $uuid = sdk_uuid();
   $try=0;
-  $devicesStr = httpQuery("https://appv3.tt-monitor.com/topaze/configuration/v2/getDevicesMultizone/".$uuid, "POST", '{"systemId":"'.$systemToUse["id"].'","centralId":"'.$centralId.'","transmitterId":"'.$transmitterId.'","ttmSessionId":"'.$ttmSessionId.'","isVideoOptional":"true","isScenariosZoneOptional":"true","boxVersion":"'.$versions["box"].'"}', null, array("Content-Type: application/json", "Authorization: Bearer ".$sessionId, "X-Identity-Provider: JANRAIN", "ttmSessionIdNotRequired: true"), false, true);
+  $devicesStr = httpQuery("https://appv3.tt-monitor.com/topaze/configuration/v2/getDevicesMultizone/".$uuid, "POST", '{"systemId":"'.$systemToUse["id"].'","centralId":"'.$centralId.'","transmitterId":"'.$transmitterId.'","ttmSessionId":"'.$ttmSessionId.'","isVideoOptional":"true","isScenariosZoneOptional":"true","boxVersion":"'.$versions["box"].'"}', null, array_merge($defaultHeaders, array("Content-Type: application/json;charset=UTF-8", "Authorization: Bearer ".$sessionId)), false, true);
   do {
-    $devicesStatusStr = httpQuery("https://appv3.tt-monitor.com/topaze/configuration/v2/getDevicesMultizone/".$uuid, "GET", null, null, array("Content-Type: application/json", "Authorization: Bearer ".$sessionId, "X-Identity-Provider: JANRAIN", "ttmSessionIdNotRequired: true"), false, true);
+    $devicesStatusStr = httpQuery("https://appv3.tt-monitor.com/topaze/configuration/v2/getDevicesMultizone/".$uuid, "GET", null, null, array_merge($defaultHeaders, array("Content-Type: application/json;charset=UTF-8", "Authorization: Bearer ".$sessionId)), false, true);
     $devicesStatus = sdk_json_decode($devicesStatusStr, true);
     if ($devicesStatus["status"] === "request_status_done") {
       // on est obligé de faire un traitement sur la réponse sinon sdk_json_decode ne fonctionne pas
@@ -181,7 +191,7 @@ if($action === "scenarios") {
         case 104: $state="group"; $group=4; break;
         case 105: $state="presence"; break;
       }
-      $systemStateStr = httpQuery("https://appv3.tt-monitor.com/topaze/action/stateCommand", "POST", '{"systemState":"'.$state.'","group":['.$group.'],"currentGroup":[],"nbGroups":"4","ttmSessionId":"'.$ttmSessionId.'"}', null, array("Content-Type: application/json", "Authorization: Bearer ".$sessionId, "X-Identity-Provider: JANRAIN", "ttmSessionIdNotRequired: true"));
+      $systemStateStr = httpQuery("https://appv3.tt-monitor.com/topaze/action/stateCommand", "POST", '{"systemState":"'.$state.'","group":['.$group.'],"currentGroup":[],"nbGroups":"4","ttmSessionId":"'.$ttmSessionId.'"}', null, array_merge($defaultHeaders, array("Content-Type: application/json;charset=UTF-8", "Authorization: Bearer ".$sessionId)));
       $systemState = sdk_json_decode($systemStateStr, true);
 
       if(!isset($systemState["commandStatus"]) || $systemState["commandStatus"] !== "CMD_OK") {
@@ -191,7 +201,7 @@ if($action === "scenarios") {
     } else if ($action > 1000) {
       // on déclenche un scénario
       $id = $action - 1000;
-      $scenarioStr = httpQuery("https://appv3.tt-monitor.com/topaze/api/scenarios/launch", "POST", '{"scenarioId":"'.$id.'","ttmSessionId":"'.$ttmSessionId.'"}', null, array("Content-Type: application/json", "Authorization: Bearer ".$sessionId, "X-Identity-Provider: JANRAIN", "ttmSessionIdNotRequired: true"));
+      $scenarioStr = httpQuery("https://appv3.tt-monitor.com/topaze/api/scenarios/launch", "POST", '{"scenarioId":"'.$id.'","ttmSessionId":"'.$ttmSessionId.'"}', null, array_merge($defaultHeaders, array("Content-Type: application/json;charset=UTF-8", "Authorization: Bearer ".$sessionId)));
       
       if ($scenarioStr !== '["CMD_OK"]') {
         sdk_showResult(null, $scenarioStr);
@@ -201,7 +211,7 @@ if($action === "scenarios") {
   }
 
   // on retourne l'état de l'alarme
-  $alarmStatusStr = httpQuery("https://appv3.tt-monitor.com/topaze/status/getSystemState", "POST", '{"centralId":"'.$centralId.'","ttmSessionId":"'.$ttmSessionId.'"}', null, array("Content-Type: application/json", "Authorization: Bearer ".$sessionId, "X-Identity-Provider: JANRAIN", "ttmSessionIdNotRequired: true"));
+  $alarmStatusStr = httpQuery("https://appv3.tt-monitor.com/topaze/status/getSystemState", "POST", '{"centralId":"'.$centralId.'","ttmSessionId":"'.$ttmSessionId.'"}', null, array_merge($defaultHeaders, array("Content-Type: application/json;charset=UTF-8", "Authorization: Bearer ".$sessionId)));
   $alarmStatus = sdk_json_decode($alarmStatusStr, true);
   $systemState = "inconnu";
   if(isset($alarmStatus["systemState"])) {
